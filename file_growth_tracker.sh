@@ -51,12 +51,12 @@ do
   current_size_gb=$(($current_size / 1024 / 1024 / 1024))
   growth_rate_mb=$((growth_rate / 1024))
   echo "Current file size: ${current_size_gb} GB"
-  echo "Growth rate: $growth_rate_mb MB/MINUTE"
+  echo "Growth rate: ${growth_rate_mb} MB/MINUTE"
 
   # Display remaining time in days, hours and minutes
   remaining_days=$(($remaining_time / 1440))
   remaining_hours=$(($remaining_time % 1440 / 60))
   remaining_minutes=$(($remaining_time % 1440 % 60))
-  echo "Remaining time until target size: $remaining_days days, $remaining_hours hours and $remaining_minutes minutes"
+  echo "Remaining time until target size: ${remaining_days} days, ${remaining_hours} hours and ${remaining_minutes} minutes"
   sleep 60
 done
