@@ -5,7 +5,7 @@ target_size="${1}"
 file_path="${2}"
 
 # Validate input
-if [[ -z $target_size || -z $file_path ]]; then
+if [[ -z "${target_size}" || -z "${file_path}"; then
   echo ""
 fi
 
