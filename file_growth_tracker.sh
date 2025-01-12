@@ -1,8 +1,13 @@
 #!/bin/bash
 
 # Get target size in gigabytes and file path
-target_size=$1
-file_path=$2
+target_size="${1}"
+file_path="${2}"
+
+# Validate input
+if [[ -z $target_size || -z $file_path ]]; then
+  echo ""
+fi
 
 # Convert target size to bytes
 target_size_bytes=$(($target_size*1024*1024*1024))
