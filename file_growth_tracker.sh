@@ -10,7 +10,7 @@ if [[ -z "${target_size}" || -z "${file_path}"; then
 fi
 
 # Convert target size to bytes
-target_size_bytes=$(($target_size*1024*1024*1024))
+target_size_bytes=$(( target_size * 1024 * 1024 * 1024))
 
 # Get current size of file in bytes
 current_size=$(du -b $file_path | awk '{print $1}')
