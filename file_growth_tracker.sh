@@ -22,7 +22,7 @@ if [ "${current_size}" -ge "${target_size_bytes}" ]; then
 fi
 
 # Calculate remaining size in bytes
-remaining_size=$(($target_size_bytes - $current_size))
+remaining_size=$(( "${target_size_bytes}" - "${current_size}" ))
 
 # Get the start time and start size
 start_time=$(date +%s)
