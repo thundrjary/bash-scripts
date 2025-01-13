@@ -4,18 +4,28 @@
 target_size="${1}"
 file_path="${2}"
 
-# Validate input
-if [[ -z "${target_size}" || -z "${file_path}" ]]; then
-  echo "Usage: $0 <target_size> <file_path>"
+# Validate input: Target size must be a valid number
+if ! [[ "${target_size}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  echo "Error: Target size (${target_size}) is not a valid number."
+  exit 1
 fi
 
 # Convert target size to bytes
 target_size_bytes=$(( target_size * 1024 * 1024 * 1024 ))
+if [[ "${target_size_bytes}" -le 0 ]]; then
+  echo "Error: Target size must be greater than zero."
+  exit 1
+fi
+
+# Limit excessively large sizes (e.g., > 1 TB)
+max_size_bytes=$(( 1024 * 1024 * 1024 * 1024 ))  # 1 TB
+if [[ "${target_size_bytes}" -gt "${max_size_bytes}" ]]; then
+  echo "Error: Target size (${target_size_bytes} bytes) exceeds maximum allowed size (1 TB)."
+  exit 1
+fi
 
 # Get current size of file in bytes
 current_size=$( du -b "${file_path}" | awk '{print $1}' )
-
-# Check if current size is greater than or equal to target size
 if [[ "${current_size}" -ge "${target_size_bytes}" ]]; then
   echo "File is already at or above target size."
   exit 1
