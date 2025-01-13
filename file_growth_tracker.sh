@@ -44,7 +44,12 @@ start_size="${current_size}"
 # Continuously update countdown
 while [[ "${current_size}" -lt "${target_size_bytes}" ]]
 do
-  current_size=$( du -b "${file_path}" | awk '{print $1}' )
+  current_size=$(stat -c "%s" "${file_path}" 2>/dev/null | awk '{print $1}')
+  if [[ -z "$current_size" ]]; then
+    echo "Error: File became inaccessible during monitoring."
+    exit 1
+  fi
+  
   remaining_size=$(( target_size_bytes - current_size ))
   
   # Calculate the growth rate in bytes/minute
