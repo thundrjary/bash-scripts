@@ -10,6 +10,11 @@ if ! [[ "${target_size}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
   exit 1
 fi
 
+if [[ ! -f "${file_path}" ]]; then
+  echo "Error: File path (${file_path}) does not exist or is not a regular file."
+  exit 1
+fi
+
 # Convert target size to bytes
 target_size_bytes=$(( target_size * 1024 * 1024 * 1024 ))
 if [[ "${target_size_bytes}" -le 0 ]]; then
