@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Functions
 validate_inputs() {
   local target_size="${1}"
   local file_path="${2}"
