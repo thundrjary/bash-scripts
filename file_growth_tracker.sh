@@ -37,13 +37,13 @@ start_size="${current_size}"
 
 while [[ "${current_size}" -lt "${target_size_bytes}" ]]
 do
-  # Retrieve file size using stat
-  current_size=$(stat -c "%s" "${file_path}" 2>/dev/null)
-  if [[ $? -ne 0 ]]; then
+  # Retrieve file size using stat and check for errors
+  if ! current_size=$(stat -c "%s" "${file_path}" 2>/dev/null); then
     echo "Error: Unable to retrieve file size for ${file_path}."
     exit 1
   fi
-  
+
+  # Validate the retrieved size
   if [[ -z "${current_size}" || ! "${current_size}" =~ ^[0-9]+$ ]]; then
     echo "Error: Invalid file size retrieved (${current_size})."
     exit 1
