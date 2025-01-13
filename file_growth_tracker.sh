@@ -13,6 +13,11 @@ if [[ ! -f "${file_path}" ]]; then
   exit 1
 fi
 
+if [[ ! -r "${file_path}" ]]; then
+  echo "Error: File path (${file_path}) is not readable."
+  exit 1
+fi
+
 echo "Starting file growth monitor"
 echo "Target size: ${target_size} GB"
 echo "Initial size: $(( current_size / 1024 / 1024 / 1024 )) GB"
@@ -25,10 +30,23 @@ if (( bc_result )); then
   exit 1
 fi
 
-current_size=$(stat -c "%s" "${file_path}")
-if (( current_size >= target_size_bytes )); then
-  echo "File is already at or above the target size."
-  exit 0
+# Retrieve file size and handle errors
+raw_size=$(wc -c < "${file_path}" 2>/dev/null)
+if [[ $? -ne 0 || -z "${raw_size}" ]]; then
+  echo "Error: Unable to retrieve file size for ${file_path}."
+  exit 1
+fi
+
+current_size=$(echo "${raw_size}" | awk '{$1=$1; print}')
+if [[ -z "${current_size}" || ! "${current_size}" =~ ^[0-9]+$ ]]; then
+  echo "Error: Invalid file size retrieved (${current_size})."
+  exit 1
+fi
+
+# Ensure the size is numeric
+if ! [[ "${current_size}" =~ ^[0-9]+$ ]]; then
+  echo "Error: Invalid file size retrieved (${current_size})."
+  exit 1
 fi
 
 remaining_size=$(( target_size_bytes - current_size ))
@@ -42,9 +60,19 @@ start_size="${current_size}"
 
 while [[ "${current_size}" -lt "${target_size_bytes}" ]]
 do
-  # Retrieve file size using stat and check for errors
-  if ! current_size=$(stat -c "%s" "${file_path}" 2>/dev/null); then
+  # Wait for at least 1 second to ensure elapsed_time is non-zero
+  sleep 1
+
+  # Retrieve file size and handle errors
+  raw_size=$(wc -c < "${file_path}" 2>/dev/null)
+  if [[ $? -ne 0 || -z "${raw_size}" ]]; then
     echo "Error: Unable to retrieve file size for ${file_path}."
+    exit 1
+  fi
+  
+  current_size=$(echo "${raw_size}" | awk '{$1=$1; print}')
+  if [[ -z "${current_size}" || ! "${current_size}" =~ ^[0-9]+$ ]]; then
+    echo "Error: Invalid file size retrieved (${current_size})."
     exit 1
   fi
 
@@ -85,34 +113,11 @@ do
     exit 1
   fi
 
-  # Calculate current size in GB for display
-  current_size_gb=$(( current_size / 1024 / 1024 / 1024 ))
-  if [[ "${current_size_gb}" -lt 0 ]]; then
-    echo "Error: Current file size in GB is invalid (${current_size_gb})."
-    exit 1
-  fi
-
-  # Calculate growth rate in MB/min for display
-  growth_rate_mb=$(( growth_rate / 1024 ))
-  if [[ "${growth_rate_mb}" -lt 0 ]]; then
-    echo "Error: Growth rate in MB is invalid (${growth_rate_mb})."
-    exit 1
-  fi
-
-  # Calculate remaining time in days, hours, and minutes
-  remaining_days=$(( remaining_time / 1440 ))
-  remaining_hours=$(( (remaining_time % 1440) / 60 ))
-  remaining_minutes=$(( remaining_time % 60 ))
-  if [[ "${remaining_days}" -lt 0 || "${remaining_hours}" -lt 0 || "${remaining_minutes}" -lt 0 ]]; then
-    echo "Error: Remaining time in days, hours, or minutes is invalid."
-    exit 1
-  fi
-  
   # Display progress
-  echo "Current file size: ${current_size_gb} GB"
-  echo "Growth rate: ${growth_rate_mb} MB/MINUTE"
-  echo "Remaining time until target size: ${remaining_days} days, ${remaining_hours} hours and ${remaining_minutes} minutes"
+  echo "Current file size: $((current_size / 1024 / 1024 / 1024)) GB"
+  echo "Growth rate: $((growth_rate / 1024)) MB/MINUTE"
+  echo "Remaining time until target size: $((remaining_time / 1440)) days, $(((remaining_time % 1440) / 60)) hours and $((remaining_time % 60)) minutes"
 
-  # Wait for a minute before the next iteration
-  sleep 60
+  # Wait for a small delay before the next iteration
+  sleep 6
 done
