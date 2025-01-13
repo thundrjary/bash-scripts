@@ -10,30 +10,24 @@ if ! [[ "${target_size}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
   exit 1
 fi
 
+# Validate file path: File must exist and be a regular file
 if [[ ! -f "${file_path}" ]]; then
   echo "Error: File path (${file_path}) does not exist or is not a regular file."
   exit 1
 fi
 
 # Convert target size to bytes
-target_size_bytes=$(( target_size * 1024 * 1024 * 1024 ))
-if [[ "${target_size_bytes}" -le 0 ]]; then
+target_size_bytes=$(awk "BEGIN {print ${target_size} * 1024 * 1024 * 1024}")
+if (( $(echo "${target_size_bytes} <= 0" | bc -l) )); then
   echo "Error: Target size must be greater than zero."
   exit 1
 fi
 
-# Limit excessively large sizes (e.g., > 1 TB)
-max_size_bytes=$(( 1024 * 1024 * 1024 * 1024 ))  # 1 TB
-if [[ "${target_size_bytes}" -gt "${max_size_bytes}" ]]; then
-  echo "Error: Target size (${target_size_bytes} bytes) exceeds maximum allowed size (1 TB)."
-  exit 1
-fi
-
 # Get current size of file in bytes
-current_size=$( du -b "${file_path}" | awk '{print $1}' )
-if [[ "${current_size}" -ge "${target_size_bytes}" ]]; then
-  echo "File is already at or above target size."
-  exit 1
+current_size=$(stat -c "%s" "${file_path}")
+if (( current_size >= target_size_bytes )); then
+  echo "File is already at or above the target size."
+  exit 0
 fi
 
 # Calculate remaining size in bytes
