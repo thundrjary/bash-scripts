@@ -6,7 +6,7 @@ file_path="${2}"
 
 # Validate input
 if [[ -z "${target_size}" || -z "${file_path}" ]]; then
-  echo ""
+  echo "Usage: $0 <target_size> <file_path>"
 fi
 
 # Convert target size to bytes
