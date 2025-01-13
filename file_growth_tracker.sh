@@ -14,7 +14,8 @@ if [[ ! -f "${file_path}" ]]; then
 fi
 
 target_size_bytes=$(awk "BEGIN {print ${target_size} * 1024 * 1024 * 1024}")
-if (( $(echo "${target_size_bytes} <= 0" | bc -l) )); then
+bc_result=$(echo "${target_size_bytes} <= 0" | bc -l)
+if (( bc_result )); then
   echo "Error: Target size must be greater than zero."
   exit 1
 fi
