@@ -1,47 +1,39 @@
 #!/bin/bash
 
-# Get target size in gigabytes and file path
-target_size="${1}"
+target_size="${1}" # In gigabytes
 file_path="${2}"
 
-# Validate input: Target size must be a valid number
 if ! [[ "${target_size}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
   echo "Error: Target size (${target_size}) is not a valid number."
   exit 1
 fi
 
-# Validate file path: File must exist and be a regular file
 if [[ ! -f "${file_path}" ]]; then
   echo "Error: File path (${file_path}) does not exist or is not a regular file."
   exit 1
 fi
 
-# Convert target size to bytes
 target_size_bytes=$(awk "BEGIN {print ${target_size} * 1024 * 1024 * 1024}")
 if (( $(echo "${target_size_bytes} <= 0" | bc -l) )); then
   echo "Error: Target size must be greater than zero."
   exit 1
 fi
 
-# Get current size of file in bytes
 current_size=$(stat -c "%s" "${file_path}")
 if (( current_size >= target_size_bytes )); then
   echo "File is already at or above the target size."
   exit 0
 fi
 
-# Calculate remaining size in bytes
 remaining_size=$(( target_size_bytes - current_size ))
 if [[ $remaining_size -le 0 ]]; then
   echo "Error: Unexpected remaining size calculation."
   exit 1
 fi
 
-# Get the start time and start size
 start_time=$( date +%s )
 start_size="${current_size}"
 
-# Continuously update countdown
 while [[ "${current_size}" -lt "${target_size_bytes}" ]]
 do
   current_size=$(stat -c "%s" "${file_path}" 2>/dev/null | awk '{print $1}')
@@ -51,7 +43,11 @@ do
   fi
   
   remaining_size=$(( target_size_bytes - current_size ))
-  
+  if [[ $remaining_size -le 0 ]]; then
+    echo "Error: Unexpected remaining size calculation."
+    exit 1
+  fi
+
   # Calculate the growth rate in bytes/minute
   current_time=$( date +%s )
   elapsed_time=$(( current_time - start_time ))
