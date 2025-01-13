@@ -37,10 +37,15 @@ start_size="${current_size}"
 
 while [[ "${current_size}" -lt "${target_size_bytes}" ]]
 do
-  # Get the current file size
-  current_size=$(stat -c "%s" "${file_path}" 2>/dev/null | awk '{print $1}')
-  if [[ -z "$current_size" ]]; then
-    echo "Error: File became inaccessible during monitoring."
+  # Retrieve file size using stat
+  current_size=$(stat -c "%s" "${file_path}" 2>/dev/null)
+  if [[ $? -ne 0 ]]; then
+    echo "Error: Unable to retrieve file size for ${file_path}."
+    exit 1
+  fi
+  
+  if [[ -z "${current_size}" || ! "${current_size}" =~ ^[0-9]+$ ]]; then
+    echo "Error: Invalid file size retrieved (${current_size})."
     exit 1
   fi
 
