@@ -1,103 +1,123 @@
 #!/bin/bash
 
-target_size="${1}" # In kilobytes
-file_path="${2}"
+# Functions
+validate_inputs() {
+  local target_size="${1}"
+  local file_path="${2}"
 
-if ! [[ "${target_size}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
-  echo "Error: Target size (${target_size}) is not a valid number."
-  exit 1
-fi
+  if ! [[ "${target_size}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+    echo "Error: Target size (${target_size}) is not a valid number."
+    exit 1
+  fi
 
-if [[ ! -f "${file_path}" ]]; then
-  echo "Error: File path (${file_path}) does not exist or is not a regular file."
-  exit 1
-fi
+  if [[ ! -f "${file_path}" ]]; then
+    echo "Error: File path (${file_path}) does not exist or is not a regular file."
+    exit 1
+  fi
 
-if [[ ! -r "${file_path}" ]]; then
-  echo "Error: File path (${file_path}) is not readable."
-  exit 1
-fi
+  if [[ ! -r "${file_path}" ]]; then
+    echo "Error: File path (${file_path}) is not readable."
+    exit 1
+  fi
+}
 
-echo "Starting file growth monitor"
-echo "Target size: ${target_size} KB"
-echo "---"
+calculate_growth_rate() {
+  local start_size="${1}"
+  local current_size="${2}"
+  local elapsed_time="${3}"
 
-# Convert target size to bytes (KB to bytes)
-target_size_bytes=$(( target_size * 1024 ))
-if [[ "${target_size_bytes}" -le 0 ]]; then
-  echo "Error: Target size must be greater than zero."
-  exit 1
-fi
+  if [[ "${elapsed_time}" -lt 1 ]]; then
+    elapsed_time=1 # Prevent division by zero
+  fi
 
-# Retrieve file size and handle errors
-raw_size=$(wc -c < "${file_path}" 2>/dev/null)
-if [[ $? -ne 0 || -z "${raw_size}" ]]; then
-  echo "Error: Unable to retrieve file size for ${file_path}."
-  exit 1
-fi
+  local growth_rate_bytes=$(( (current_size - start_size) / elapsed_time ))
+  local growth_rate_kb=$(( (growth_rate_bytes * 60) / 1024 ))
 
-current_size=$(echo "${raw_size}" | awk '{$1=$1; print}')
-if [[ -z "${current_size}" || ! "${current_size}" =~ ^[0-9]+$ ]]; then
-  echo "Error: Invalid file size retrieved (${current_size})."
-  exit 1
-fi
+  echo "${growth_rate_kb}" # Return growth rate
+}
 
-remaining_size=$(( target_size_bytes - current_size ))
-if [[ "${remaining_size}" -le 0 ]]; then
-  echo "Error: Unexpected remaining size calculation."
-  exit 1
-fi
+main() {
+  local target_size="${1}" # In kilobytes
+  local file_path="${2}"
 
-start_time=$(date +%s)
-start_size="${current_size}"
+  # Validate inputs
+  validate_inputs "${target_size}" "${file_path}"
 
-# Wait 1 second before starting the loop
-sleep 1
+  echo "Starting file growth monitor"
+  echo "Target size: ${target_size} KB"
+  echo "---"
 
-while [[ "${current_size}" -lt "${target_size_bytes}" ]]; do
-  sleep 5  # Adjusted for slow-growing files
+  # Convert target size to bytes (KB to bytes)
+  local target_size_bytes=$(( target_size * 1024 ))
+  if [[ "${target_size_bytes}" -le 0 ]]; then
+    echo "Error: Target size must be greater than zero."
+    exit 1
+  fi
 
-  # Retrieve file size
+  # Retrieve initial file size
+  local raw_size
   raw_size=$(wc -c < "${file_path}" 2>/dev/null)
   if [[ $? -ne 0 || -z "${raw_size}" ]]; then
     echo "Error: Unable to retrieve file size for ${file_path}."
     exit 1
   fi
 
+  local current_size
   current_size=$(echo "${raw_size}" | awk '{$1=$1; print}')
   if [[ -z "${current_size}" || ! "${current_size}" =~ ^[0-9]+$ ]]; then
     echo "Error: Invalid file size retrieved (${current_size})."
     exit 1
   fi
 
-  # Calculate remaining size
-  remaining_size=$(( target_size_bytes - current_size ))
+  local remaining_size=$(( target_size_bytes - current_size ))
   if [[ "${remaining_size}" -le 0 ]]; then
     echo "Error: Unexpected remaining size calculation."
     exit 1
   fi
 
-  # Get current time and calculate elapsed time
-  current_time=$(date +%s)
-  elapsed_time=$(( current_time - start_time ))
-  if [[ "${elapsed_time}" -lt 1 ]]; then
-    elapsed_time=1 # Prevent division by zero
-  fi
+  local start_time
+  start_time=$(date +%s)
+  local start_size="${current_size}"
 
-  # Calculate growth rate
-  growth_rate_bytes=$(( (current_size - start_size) / elapsed_time ))
-  growth_rate_kb=$(( (growth_rate_bytes * 60) / 1024 )) # Convert to KB/minute
+  # Monitor file growth
+  while [[ "${current_size}" -lt "${target_size_bytes}" ]]; do
+    sleep 5  # Adjusted for slow-growing files
 
-  if [[ "${growth_rate_kb}" -lt 0 ]]; then
-    echo "Error: Growth rate calculation failed or became negative (${growth_rate_kb})."
-    exit 1
-  fi
+    # Retrieve current file size
+    raw_size=$(wc -c < "${file_path}" 2>/dev/null)
+    if [[ $? -ne 0 || -z "${raw_size}" ]]; then
+      echo "Error: Unable to retrieve file size for ${file_path}."
+      exit 1
+    fi
 
-  # Display progress in KB
-  current_size_kb=$(( current_size / 1024 ))
-  remaining_size_kb=$(( remaining_size / 1024 ))
-  echo "Current file size: ${current_size_kb} KB"
-  echo "Remaining size: ${remaining_size_kb} KB"
-  echo "Growth rate: ${growth_rate_kb} KB/MINUTE"
-done
+    current_size=$(echo "${raw_size}" | awk '{$1=$1; print}')
+    if [[ -z "${current_size}" || ! "${current_size}" =~ ^[0-9]+$ ]]; then
+      echo "Error: Invalid file size retrieved (${current_size})."
+      exit 1
+    fi
 
+    # Calculate remaining size
+    remaining_size=$(( target_size_bytes - current_size ))
+    if [[ "${remaining_size}" -le 0 ]]; then
+      echo "Error: Unexpected remaining size calculation."
+      exit 1
+    fi
+
+    # Get elapsed time and calculate growth rate
+    local current_time
+    current_time=$(date +%s)
+    local elapsed_time=$(( current_time - start_time ))
+    local growth_rate_kb
+    growth_rate_kb=$(calculate_growth_rate "${start_size}" "${current_size}" "${elapsed_time}")
+
+    # Display progress in KB
+    local current_size_kb=$(( current_size / 1024 ))
+    local remaining_size_kb=$(( remaining_size / 1024 ))
+    echo "Current file size: ${current_size_kb} KB"
+    echo "Remaining size: ${remaining_size_kb} KB"
+    echo "Growth rate: ${growth_rate_kb} KB/MINUTE"
+  done
+}
+
+# Call main function with all arguments
+main "$@"
