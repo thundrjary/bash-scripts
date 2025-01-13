@@ -13,6 +13,11 @@ if [[ ! -f "${file_path}" ]]; then
   exit 1
 fi
 
+echo "Starting file growth monitor"
+echo "Target size: ${target_size} GB"
+echo "Initial size: $(( current_size / 1024 / 1024 / 1024 )) GB"
+echo "---"
+
 target_size_bytes=$(awk "BEGIN {print ${target_size} * 1024 * 1024 * 1024}")
 bc_result=$(echo "${target_size_bytes} <= 0" | bc -l)
 if (( bc_result )); then
@@ -102,7 +107,7 @@ do
     echo "Error: Remaining time in days, hours, or minutes is invalid."
     exit 1
   fi
-
+  
   # Display progress
   echo "Current file size: ${current_size_gb} GB"
   echo "Growth rate: ${growth_rate_mb} MB/MINUTE"
