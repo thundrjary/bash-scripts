@@ -119,5 +119,4 @@ main() {
   done
 }
 
-# Call main function with all arguments
 main "$@"
