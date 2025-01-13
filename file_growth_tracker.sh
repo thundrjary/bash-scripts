@@ -32,6 +32,10 @@ fi
 
 # Calculate remaining size in bytes
 remaining_size=$(( target_size_bytes - current_size ))
+if [[ $remaining_size -le 0 ]]; then
+  echo "Error: Unexpected remaining size calculation."
+  exit 1
+fi
 
 # Get the start time and start size
 start_time=$( date +%s )
