@@ -51,11 +51,13 @@ fi
 start_time=$(date +%s)
 start_size="${current_size}"
 
-while [[ "${current_size}" -lt "${target_size_bytes}" ]]; do
-  # Wait for at least 1 second to ensure elapsed_time is non-zero
-  sleep 1
+# Wait 1 second before starting the loop
+sleep 1
 
-  # Retrieve file size and handle errors
+while [[ "${current_size}" -lt "${target_size_bytes}" ]]; do
+  sleep 5  # Adjusted for slow-growing files
+
+  # Retrieve file size
   raw_size=$(wc -c < "${file_path}" 2>/dev/null)
   if [[ $? -ne 0 || -z "${raw_size}" ]]; then
     echo "Error: Unable to retrieve file size for ${file_path}."
@@ -75,40 +77,27 @@ while [[ "${current_size}" -lt "${target_size_bytes}" ]]; do
     exit 1
   fi
 
-  # Get current time
+  # Get current time and calculate elapsed time
   current_time=$(date +%s)
-
-  # Calculate elapsed time
   elapsed_time=$(( current_time - start_time ))
-  if [[ "${elapsed_time}" -le 0 ]]; then
-    echo "Error: Elapsed time is invalid (${elapsed_time})."
-    exit 1
+  if [[ "${elapsed_time}" -lt 1 ]]; then
+    elapsed_time=1 # Prevent division by zero
   fi
 
-  # Calculate growth rate in bytes/minute
-  growth_rate=$(( (current_size - start_size) / elapsed_time ))
-  if [[ "${growth_rate}" -lt 0 ]]; then
-    echo "Error: Growth rate calculation failed or became negative (${growth_rate})."
-    exit 1
-  fi
+  # Calculate growth rate
+  growth_rate_bytes=$(( (current_size - start_size) / elapsed_time ))
+  growth_rate_kb=$(( (growth_rate_bytes * 60) / 1024 )) # Convert to KB/minute
 
-  # Calculate remaining time in minutes
-  remaining_time=$(( remaining_size / growth_rate ))
-  if [[ "${remaining_time}" -lt 0 ]]; then
-    echo "Error: Remaining time calculation failed or became negative (${remaining_time})."
+  if [[ "${growth_rate_kb}" -lt 0 ]]; then
+    echo "Error: Growth rate calculation failed or became negative (${growth_rate_kb})."
     exit 1
   fi
 
   # Display progress in KB
   current_size_kb=$(( current_size / 1024 ))
-  growth_rate_kb=$(( growth_rate / 1024 ))
   remaining_size_kb=$(( remaining_size / 1024 ))
-
   echo "Current file size: ${current_size_kb} KB"
   echo "Remaining size: ${remaining_size_kb} KB"
   echo "Growth rate: ${growth_rate_kb} KB/MINUTE"
-  echo "Remaining time until target size: $((remaining_time / 60)) hours and $((remaining_time % 60)) minutes"
-  
-  sleep 6
 done
 
